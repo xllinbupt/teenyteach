@@ -41,7 +41,6 @@ async function callQwen(env, systemPrompt, userPayload, validate) {
         headers: {
           authorization: `Bearer ${apiKey}`,
           "content-type": "application/json",
-          "x-dashscope-datainspection": JSON.stringify({ input: "cip", output: "cip" }),
         },
         body: JSON.stringify({
           model: env.DASHSCOPE_MODEL || "qwen-plus",
