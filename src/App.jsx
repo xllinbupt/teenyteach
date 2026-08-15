@@ -313,18 +313,20 @@ function ClassroomScene({ mode = "lesson", step = 0, activeState = "", recording
 
   return (
     <div className={`classroom-scene scene-${mode}`}>
-      <img className="classroom-image" src="/assets/classroom-empty.png" alt="六个座位的像素科学教室" />
-      <div className="classroom-pets" aria-label="六位会回应课堂的动物学生">
-        {students.map((student, index) => {
-          const state = getState(student, index);
-          return (
-            <button className={`classroom-pet seat-${student.seat} state-${state} ${activeStudent === student.id ? "selected" : ""}`} type="button" key={student.id} onClick={() => chooseStudent(student.id)} aria-pressed={activeStudent === student.id} title={`${student.name} · ${stateLabels[state]}`}>
-              <span className="pet-reaction" aria-hidden="true">{state === "asking" ? <Question weight="fill" /> : state === "thinking" ? <BookOpen weight="fill" /> : state === "happy" ? <Sparkle weight="fill" /> : state === "listening" ? <SpeakerHigh weight="fill" /> : null}</span>
-              <img src={student.sprite} alt={`${student.species}${student.name}，${stateLabels[state]}`} />
-              <span className="pet-name"><b>{student.name}</b><small>{stateLabels[state]}</small></span>
-            </button>
-          );
-        })}
+      <div className="classroom-canvas">
+        <img className="classroom-image" src="/assets/classroom-empty.png" alt="六个座位的像素科学教室" />
+        <div className="classroom-pets" aria-label="六位会回应课堂的动物学生">
+          {students.map((student, index) => {
+            const state = getState(student, index);
+            return (
+              <button className={`classroom-pet seat-${student.seat} state-${state} ${activeStudent === student.id ? "selected" : ""}`} type="button" key={student.id} onClick={() => chooseStudent(student.id)} aria-pressed={activeStudent === student.id} title={`${student.name} · ${stateLabels[state]}`}>
+                <span className="pet-reaction" aria-hidden="true">{state === "asking" ? <Question weight="fill" /> : state === "thinking" ? <BookOpen weight="fill" /> : state === "happy" ? <Sparkle weight="fill" /> : state === "listening" ? <SpeakerHigh weight="fill" /> : null}</span>
+                <img src={student.sprite} alt={`${student.species}${student.name}，${stateLabels[state]}`} />
+                <span className="pet-name"><b>{student.name}</b><small>{stateLabels[state]}</small></span>
+              </button>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
