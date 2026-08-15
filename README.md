@@ -4,9 +4,9 @@
 
 ## 在线体验
 
-[打开线上 Demo](https://teenyteach-classroom.xllin-bupt.chatgpt.site/)
+[打开 DMIT 线上 Demo](https://teenyteach.64-186-244-156.sslip.io:2443/)
 
-当前托管版本采用登录访问。比赛公开展示前可再切换为免登录访问并绑定自有域名。
+当前版本已部署到 DMIT 服务器并提供免登录 HTTPS 访问。正式域名完成 DNS 解析后，可将临时 `sslip.io` 地址替换为自有域名。
 
 ## 核心流程
 
