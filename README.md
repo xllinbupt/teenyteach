@@ -32,6 +32,15 @@ npm run build
 npm run test:sites
 ```
 
+## Docker 部署
+
+```bash
+cp .env.example .env
+docker compose up -d --build
+```
+
+容器默认只映射到宿主机 `127.0.0.1:3010`，请通过 Caddy、Nginx 或其他 HTTPS 入口反向代理，不要直接暴露模型接口端口。
+
 ## 技术栈
 
 - React 19 + Vite
