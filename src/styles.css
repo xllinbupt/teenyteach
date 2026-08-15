@@ -162,11 +162,11 @@ button { color: inherit; }
 .live-dot { width: 10px; height: 10px; background: #e56454; border: 2px solid var(--ink); }
 @keyframes pulse { 50% { opacity: .35; } }
 
-.teacher-console { position: absolute; z-index: 8; left: 14px; right: 14px; bottom: 12px; height: 96px; display: grid; grid-template-columns: 104px minmax(300px, 1fr) 112px; align-items: center; gap: 10px; padding: 10px; background: #9b6545; border: 4px solid #4c3527; box-shadow: inset 0 5px 0 rgba(255,255,255,.11), 4px 4px 0 rgba(47,30,21,.28); }
-.desk-tool, .next-button { height: 68px; border: 3px solid var(--ink); background: #f5dfaf; display: grid; place-items: center; align-content: center; gap: 2px; cursor: pointer; box-shadow: 3px 3px 0 rgba(47,30,21,.25); font-weight: 900; font-size: 12px; }
-.desk-tool:hover, .next-button:hover { filter: brightness(1.04); transform: translateY(-1px); }
+.teacher-console { position: absolute; z-index: 8; left: 14px; right: 14px; bottom: 12px; height: 96px; display: grid; grid-template-columns: minmax(300px, 1fr) 112px; align-items: center; gap: 10px; padding: 10px; background: #9b6545; border: 4px solid #4c3527; box-shadow: inset 0 5px 0 rgba(255,255,255,.11), 4px 4px 0 rgba(47,30,21,.28); }
+.next-button { height: 68px; border: 3px solid var(--ink); background: #f5dfaf; display: grid; place-items: center; align-content: center; gap: 2px; cursor: pointer; box-shadow: 3px 3px 0 rgba(47,30,21,.25); font-weight: 900; font-size: 12px; }
+.next-button:hover { filter: brightness(1.04); transform: translateY(-1px); }
 .next-button:disabled, .mic-button:disabled { cursor: not-allowed; filter: grayscale(.65); opacity: .56; transform: none; }
-.desk-tool svg, .next-button svg { font-size: 27px; color: #6f967f; }
+.next-button svg { font-size: 27px; color: #6f967f; }
 .next-button { background: #f2bd4e; }
 .next-button svg { color: #9b5e2a; }
 .answer-console { min-width: 0; display: grid; grid-template-columns: 112px minmax(150px, 1fr); align-items: center; gap: 8px; }
@@ -249,7 +249,7 @@ button { color: inherit; }
   .lesson-layout { grid-template-columns: 200px minmax(500px, 1fr) 230px; gap: 8px; padding: 8px; }
   .brand-lockup span { display: none; }
   .mission-panel { padding-inline: 11px; }
-  .teacher-console { grid-template-columns: 86px minmax(270px, 1fr) 92px; }
+  .teacher-console { grid-template-columns: minmax(270px, 1fr) 92px; }
   .answer-console { grid-template-columns: 96px minmax(140px, 1fr); }
 }
 
@@ -297,12 +297,12 @@ button { color: inherit; }
   .question-bubble { top: 10px; width: calc(100% - 20px); padding-right: 9px; }
   .question-bubble img { width: 46px; height: 46px; }
   .question-bubble p { font-size: 13px; }
-  .lesson-status { left: 8px; right: 8px; bottom: 178px; justify-content: center; }
+  .lesson-status { left: 8px; right: 8px; bottom: 118px; justify-content: center; }
   .lesson-status > span:last-child { display: none; }
-  .teacher-console { left: 6px; right: 6px; bottom: 6px; height: 164px; grid-template-columns: 70px 1fr 76px; align-items: end; padding: 8px; }
-  .desk-tool, .next-button { height: 50px; }
-  .desk-tool svg, .next-button svg { font-size: 20px; }
-  .answer-console { grid-column: 1 / -1; grid-row: 1; grid-template-columns: 82px minmax(0, 1fr); }
+  .teacher-console { left: 6px; right: 6px; bottom: 6px; height: 96px; grid-template-columns: minmax(0, 1fr) 76px; padding: 8px; }
+  .next-button { height: 68px; }
+  .next-button svg { font-size: 20px; }
+  .answer-console { grid-template-columns: 72px minmax(0, 1fr); }
   .mic-button { height: 68px; }
   .text-answer { height: 50px; }
   .student-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }

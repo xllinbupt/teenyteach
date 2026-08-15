@@ -3,7 +3,6 @@ import {
   ArrowLeft,
   ArrowRight,
   ArrowUp,
-  Backpack,
   BookOpen,
   BookOpenText,
   CaretDown,
@@ -800,7 +799,6 @@ function TeachRoom({ data, navigate, finishLesson }) {
           )}
           <div className="lesson-status"><span className="live-dot" /><b>{statusLabel}</b><span>{recording ? `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}` : `${statusDetail} · ${modelMode === "online" ? "千问在线" : modelMode === "offline" ? "离线引导" : "AI 准备就绪"}`}</span></div>
           <div className="teacher-console">
-            <button className="desk-tool" type="button" onClick={() => navigate("/classroom")}><Backpack weight="fill" /><span>班级背包</span></button>
             <div className="answer-console">
               <button className={`mic-button ${recording ? "recording" : ""}`} type="button" disabled={phase === "feedback" || modelThinking} aria-label={micLabel} onClick={toggleRecording}>{recording ? <Pause weight="fill" /> : <Microphone weight="fill" />}<span>{micLabel}</span></button>
               <label className="text-answer"><input value={answer} disabled={phase === "feedback" || modelThinking} onChange={(event) => setAnswer(event.target.value)} placeholder={modelThinking ? "动物同学正在想……" : phase === "lecture" ? "也可以打字讲解浮力……" : phase === "question" ? `回答${selected.name}的问题……` : "学生正在回应你……"} /><button type="button" aria-label="发送本轮回答" disabled={phase === "feedback" || modelThinking || !answer.trim()} onClick={advanceDialogue}><PaperPlaneTilt weight="fill" /></button></label>
