@@ -135,6 +135,37 @@ test("proxies generated TTS audio without exposing its temporary URL", async () 
   });
 });
 
+test("upgrades the trusted Bailian audio URL to HTTPS before downloading", async () => {
+  const wav = Uint8Array.from([82, 73, 70, 70, 5, 6, 7, 8]);
+  let calls = 0;
+  await withMockFetch(async (url) => {
+    calls += 1;
+    if (calls === 1) {
+      return new Response(JSON.stringify({
+        output: {
+          audio: {
+            url: "http://dashscope-result-bj.oss-cn-beijing.aliyuncs.com/generated/audio.wav?signature=hidden",
+          },
+        },
+      }), { headers: { "content-type": "application/json" } });
+    }
+    assert.equal(new URL(url).protocol, "https:");
+    assert.equal(new URL(url).hostname, "dashscope-result-bj.oss-cn-beijing.aliyuncs.com");
+    return new Response(wav, { headers: { "content-type": "audio/wav" } });
+  }, async () => {
+    const response = await handleApiRequest(new Request("https://example.test/api/ai/tts", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ text: "老师，我听懂啦。" }),
+    }), { DASHSCOPE_API_KEY: "server-secret" });
+
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get("content-type"), "audio/wav");
+    assert.deepEqual(new Uint8Array(await response.arrayBuffer()), wav);
+    assert.equal(calls, 2);
+  });
+});
+
 test("emits the files required by Sites packaging", async () => {
   await access(new URL("../dist/client/index.html", import.meta.url));
   await access(new URL("../dist/server/index.js", import.meta.url));

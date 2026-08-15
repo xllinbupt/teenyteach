@@ -170,7 +170,9 @@ async function handleTtsRequest(request, env) {
     }
     if (audio?.url) {
       const audioUrl = new URL(audio.url);
-      if (audioUrl.protocol !== "https:") throw new Error("TTS_INVALID_URL");
+      const trustedOssHost = /^dashscope-result-[a-z0-9-]+\.oss-[a-z0-9-]+\.aliyuncs\.com$/i.test(audioUrl.hostname);
+      if (!trustedOssHost || !["http:", "https:"].includes(audioUrl.protocol)) throw new Error("TTS_INVALID_URL");
+      audioUrl.protocol = "https:";
       const audioResponse = await fetch(audioUrl, { signal: controller.signal });
       if (!audioResponse.ok) throw new Error("TTS_DOWNLOAD_ERROR");
       return new Response(audioResponse.body, { headers: { "content-type": audioResponse.headers.get("content-type") || "audio/wav", "cache-control": "private, max-age=3600" } });
