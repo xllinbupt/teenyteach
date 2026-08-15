@@ -520,6 +520,9 @@ function TeachRoom({ data, navigate, finishLesson }) {
   const classroomStageRef = useRef(null);
   const dialogueLogRef = useRef(null);
   const historyIdRef = useRef(0);
+  const recognitionRef = useRef(null);
+  const voiceTranscriptRef = useRef("");
+  const voiceShouldSubmitRef = useRef(false);
   const studentAudioRef = useRef(null);
   const studentVoiceUrlsRef = useRef(new Map());
   const [phase, setPhase] = useState("lecture");
@@ -527,7 +530,7 @@ function TeachRoom({ data, navigate, finishLesson }) {
   const [recording, setRecording] = useState(false);
   const [seconds, setSeconds] = useState(0);
   const [answer, setAnswer] = useState("");
-  const [hasSpoken, setHasSpoken] = useState(false);
+  const [speechError, setSpeechError] = useState("");
   const [dialogueHistory, setDialogueHistory] = useState([]);
   const [speaking, setSpeaking] = useState(false);
   const [voiceLoading, setVoiceLoading] = useState(false);
@@ -545,7 +548,6 @@ function TeachRoom({ data, navigate, finishLesson }) {
   const completedStudentIds = dialogueTurns.slice(0, phase === "feedback" ? turn + 1 : turn).map((item) => item.studentId);
   const missionStep = phase === "lecture" ? 0 : Math.min(turn + 1, 3);
   const progressPercent = phase === "lecture" ? 58 : Math.min(96, 68 + turn * 10 + (phase === "feedback" ? 6 : 0));
-  const canRespond = Boolean(answer.trim() || hasSpoken);
   const missionTasks = ["把浮力讲给全班听", "回答第一次提问", "接住学生的追问", "完成三轮课堂对话"];
 
   useEffect(() => { if (!recording) return undefined; const timer = window.setInterval(() => setSeconds((value) => value + 1), 1000); return () => window.clearInterval(timer); }, [recording]);
@@ -559,6 +561,10 @@ function TeachRoom({ data, navigate, finishLesson }) {
   }, [dialogueHistory]);
   useEffect(() => () => {
     studentVoiceUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+  }, []);
+  useEffect(() => () => {
+    voiceShouldSubmitRef.current = false;
+    recognitionRef.current?.abort();
   }, []);
 
   const appendDialogue = (...entries) => {
@@ -644,18 +650,6 @@ function TeachRoom({ data, navigate, finishLesson }) {
     };
   }, [phase, turn]);
 
-  const toggleRecording = () => {
-    if (phase === "feedback" || modelThinking) return;
-    stopStudentSpeech();
-    if (recording) {
-      setRecording(false);
-      setHasSpoken(true);
-      return;
-    }
-    setSeconds(0);
-    setRecording(true);
-  };
-
   const requestQuestion = async (teacherText, targetTurn) => {
     const fallback = fallbackTurns[targetTurn];
     try {
@@ -692,8 +686,9 @@ function TeachRoom({ data, navigate, finishLesson }) {
     }
   };
 
-  const advanceDialogue = async () => {
-    if (modelThinking || (phase !== "feedback" && !canRespond)) return;
+  const advanceDialogue = async (messageOverride) => {
+    const submittedText = typeof messageOverride === "string" ? messageOverride.trim() : answer.trim();
+    if (modelThinking || (phase !== "feedback" && !submittedText)) return;
     stopStudentSpeech();
     if (phase === "feedback") {
       if (turn < dialogueTurns.length - 1) {
@@ -713,11 +708,11 @@ function TeachRoom({ data, navigate, finishLesson }) {
       return;
     }
 
-    const spokenText = answer.trim() || `完成了一段 ${seconds || 1} 秒的口头${phase === "lecture" ? "讲解" : "回答"}`;
+    const spokenText = submittedText;
     setRecording(false);
     setAnswer("");
     setSeconds(0);
-    setHasSpoken(false);
+    setSpeechError("");
     if (phase === "lecture") {
       setModelThinking(true);
       const generatedTurn = await requestQuestion(spokenText, 0);
@@ -745,8 +740,91 @@ function TeachRoom({ data, navigate, finishLesson }) {
     }
   };
 
-  const micLabel = recording ? (phase === "lecture" ? "结束讲解" : "结束回答") : (phase === "lecture" ? "开始讲解" : "开始回答");
-  const nextLabel = modelThinking ? "学生正在想" : phase === "lecture" ? "讲完了，听提问" : phase === "question" ? "回答完成" : turn < dialogueTurns.length - 1 ? "听下一个问题" : "完成课堂";
+  const startVoiceRecording = () => {
+    if (phase === "feedback" || modelThinking || recognitionRef.current) return;
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      setSpeechError("当前浏览器不能语音转文字，请使用文字输入。" );
+      return;
+    }
+
+    stopStudentSpeech();
+    const recognition = new SpeechRecognition();
+    recognition.lang = "zh-CN";
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    voiceTranscriptRef.current = "";
+    voiceShouldSubmitRef.current = false;
+    recognitionRef.current = recognition;
+
+    recognition.onstart = () => {
+      setAnswer("");
+      setSpeechError("");
+      setSeconds(0);
+      setRecording(true);
+    };
+    recognition.onresult = (event) => {
+      let transcript = "";
+      for (let index = 0; index < event.results.length; index += 1) transcript += event.results[index][0]?.transcript || "";
+      voiceTranscriptRef.current = transcript.trim();
+      setAnswer(transcript.trimStart());
+    };
+    recognition.onerror = (event) => {
+      voiceShouldSubmitRef.current = false;
+      setSpeechError(event.error === "not-allowed" ? "需要允许麦克风权限才能语音讲课。" : "没有听清，请按住后重新说一次。" );
+      setRecording(false);
+    };
+    recognition.onend = () => {
+      const transcript = voiceTranscriptRef.current.trim();
+      const shouldSubmit = voiceShouldSubmitRef.current;
+      recognitionRef.current = null;
+      voiceShouldSubmitRef.current = false;
+      setRecording(false);
+      if (shouldSubmit && transcript) advanceDialogue(transcript);
+      else if (shouldSubmit) setSpeechError("没有听清，请按住后重新说一次。" );
+    };
+
+    try {
+      recognition.start();
+    } catch {
+      recognitionRef.current = null;
+      setSpeechError("语音识别没有启动，请重新按住说话。" );
+    }
+  };
+
+  const stopVoiceRecording = () => {
+    const recognition = recognitionRef.current;
+    if (!recognition) return;
+    voiceShouldSubmitRef.current = true;
+    try {
+      recognition.stop();
+    } catch {
+      recognitionRef.current = null;
+      setRecording(false);
+    }
+  };
+
+  const handleVoicePointerDown = (event) => {
+    if (event.pointerType === "mouse" && event.button !== 0) return;
+    event.preventDefault();
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    startVoiceRecording();
+  };
+
+  const handleVoiceKeyDown = (event) => {
+    if (!["Enter", " "].includes(event.key) || event.repeat) return;
+    event.preventDefault();
+    startVoiceRecording();
+  };
+
+  const handleVoiceKeyUp = (event) => {
+    if (!["Enter", " "].includes(event.key)) return;
+    event.preventDefault();
+    stopVoiceRecording();
+  };
+
+  const micLabel = recording ? "松开发送" : phase === "lecture" ? "按住讲解" : "按住回答";
+  const continueLabel = turn < dialogueTurns.length - 1 ? "听下一位同学" : "完成课堂";
   const statusLabel = modelThinking ? "动物同学正在认真想" : recording ? "全班正在认真听" : phase === "lecture" ? "先把浮力讲给全班听" : phase === "question" ? `${selected.name}在等你的回答` : `${selected.name}听懂了，并回应了你`;
   const statusDetail = phase === "lecture" ? "开场讲解" : `第 ${turn + 1}/3 轮对话`;
 
@@ -798,12 +876,15 @@ function TeachRoom({ data, navigate, finishLesson }) {
             </div>
           )}
           <div className="lesson-status"><span className="live-dot" /><b>{statusLabel}</b><span>{recording ? `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}` : `${statusDetail} · ${modelMode === "online" ? "千问在线" : modelMode === "offline" ? "离线引导" : "AI 准备就绪"}`}</span></div>
-          <div className="teacher-console">
-            <div className="answer-console">
-              <button className={`mic-button ${recording ? "recording" : ""}`} type="button" disabled={phase === "feedback" || modelThinking} aria-label={micLabel} onClick={toggleRecording}>{recording ? <Pause weight="fill" /> : <Microphone weight="fill" />}<span>{micLabel}</span></button>
-              <label className="text-answer"><input value={answer} disabled={phase === "feedback" || modelThinking} onChange={(event) => setAnswer(event.target.value)} placeholder={modelThinking ? "动物同学正在想……" : phase === "lecture" ? "也可以打字讲解浮力……" : phase === "question" ? `回答${selected.name}的问题……` : "学生正在回应你……"} /><button type="button" aria-label="发送本轮回答" disabled={phase === "feedback" || modelThinking || !answer.trim()} onClick={advanceDialogue}><PaperPlaneTilt weight="fill" /></button></label>
-            </div>
-            <button className="next-button" type="button" disabled={modelThinking || (phase !== "feedback" && !canRespond)} onClick={advanceDialogue}>{phase === "feedback" && turn === dialogueTurns.length - 1 ? <Sparkle weight="fill" /> : <Play weight="fill" />}<span>{nextLabel}</span></button>
+          <div className={`teacher-console ${phase === "feedback" ? "feedback-only" : ""}`}>
+            {phase === "feedback" ? (
+              <button className="next-button" type="button" disabled={modelThinking} onClick={() => advanceDialogue()}>{turn === dialogueTurns.length - 1 ? <Sparkle weight="fill" /> : <Play weight="fill" />}<span>{continueLabel}</span></button>
+            ) : (
+              <div className="answer-console">
+                <button className={`mic-button ${recording ? "recording" : ""}`} type="button" disabled={modelThinking} aria-label={micLabel} aria-pressed={recording} title={micLabel} onPointerDown={handleVoicePointerDown} onPointerUp={stopVoiceRecording} onPointerCancel={stopVoiceRecording} onKeyDown={handleVoiceKeyDown} onKeyUp={handleVoiceKeyUp}>{recording ? <PaperPlaneTilt weight="fill" /> : <Microphone weight="fill" />}<span>{micLabel}</span></button>
+                <label className="text-answer"><input value={answer} disabled={modelThinking} readOnly={recording} onChange={(event) => { setAnswer(event.target.value); setSpeechError(""); }} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); advanceDialogue(); } }} placeholder={speechError || (modelThinking ? "动物同学正在想……" : phase === "lecture" ? "也可以打字讲解浮力……" : `回答${selected.name}的问题……`)} /><button type="button" aria-label="发送本轮回答" disabled={modelThinking || !answer.trim()} onClick={() => advanceDialogue()}><PaperPlaneTilt weight="fill" /></button></label>
+              </div>
+            )}
           </div>
         </section>
 
